@@ -10,7 +10,7 @@ except ImportError as e:
 
 setup(
     name="pytimecamp",
-    version="0.1.3",
+    version="0.1.4",
     author="Steven Rossiter",
     author_email="steve@agiletek.co.uk",
     description=("A wrapper around the Timecamp API."),
