@@ -1,5 +1,5 @@
 __author__ = 'agiletekengineering'
-__version__ = '0.1.1'
+__version__ = '0.1.4'
 import datetime as dt
 
 import dateutil.relativedelta as rdelta
