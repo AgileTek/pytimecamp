@@ -195,7 +195,7 @@ class Timecamp:
         return TCItem('Entry {}'.format(entry_id), entry_data)
 
     def update_entry(self, entry_data):
-        entry_id, entry_data = self._one_item('tasks', entry_data, 'put')
+        entry_id, entry_data = self._one_item('entries', entry_data, 'put')
         return TCItem('Entry {}'.format(entry_id), entry_data)
 
     def activities_by_day(self, date=TODAY, user_id=None):
