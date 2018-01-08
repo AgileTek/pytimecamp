@@ -1,5 +1,5 @@
 __author__ = 'agiletekengineering'
-__version__ = '0.1.4'
+__version__ = '0.1.10'
 import datetime as dt
 
 import dateutil.relativedelta as rdelta
@@ -83,8 +83,9 @@ class Timecamp:
     def _request(self, item_type, method='get', data=None, **kwargs):
         if item_type not in TC_ITEM_TYPES:
             raise TimecampError("{} is not a valid API item.".format(item_type))
-        if data:
-            HEADERS['Content-Type'] = 'application/x-www-form-urlencoded'
+        if data is None:
+            data = {}
+        HEADERS['Content-Type'] = 'application/x-www-form-urlencoded'
         base_url = "{}/{}/format/json/api_token/{}".format(URL_START, item_type,
                                                            self.api_token)
         from_date = kwargs.get('from_date')
@@ -95,6 +96,8 @@ class Timecamp:
             if values:
                 csv = ','.join([str(v) for v in values])
                 base_url += "/{}/{}".format(id_type, csv)
+        if not kwargs.get("exclude_archived"):
+            data['exclude_archived'] = 1
         if kwargs.get('with_subtasks'):
             base_url += "/with_subtasks/1"
         if kwargs.get('task_id'):
@@ -125,7 +128,7 @@ class Timecamp:
 
     def _one_item(self, item_type, item_data, method="post"):
         item = self._request(item_type, method, data=item_data)
-        return list(item.items())[0]
+        return item
 
     @property
     def users(self):
@@ -191,12 +194,12 @@ class Timecamp:
             yield TCItem("Entry {}".format(entry['id']), entry)
 
     def add_entry(self, entry_data):
-        entry_id, entry_data = self._one_item('entries', entry_data)
-        return TCItem('Entry {}'.format(entry_id), entry_data)
+        entry_data = self._one_item('entries', entry_data)
+        return TCItem('Entry {}'.format(entry_data['entry_id']), entry_data)
 
     def update_entry(self, entry_data):
-        entry_id, entry_data = self._one_item('entries', entry_data, 'put')
-        return TCItem('Entry {}'.format(entry_id), entry_data)
+        entry_data = self._one_item('entries', entry_data, 'put')
+        return TCItem('Entry {}'.format(entry_data['entry_id']), entry_data)
 
     def activities_by_day(self, date=TODAY, user_id=None):
         for activity in self._request("activity", date=date,
