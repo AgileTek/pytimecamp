@@ -1,5 +1,5 @@
 __author__ = 'agiletekengineering'
-__version__ = '0.1.10'
+__version__ = '0.1.13'
 import datetime as dt
 
 import dateutil.relativedelta as rdelta
@@ -79,6 +79,7 @@ class Timecamp:
         self.start_week = convert_day_name(kwargs.get('week_starts',
                                                       'monday'))
         self.check_ssl = kwargs.get('check_ssl', True)
+        self._users = None
 
     def _request(self, item_type, method='get', data=None, **kwargs):
         if item_type not in TC_ITEM_TYPES:
@@ -132,21 +133,22 @@ class Timecamp:
 
     @property
     def users(self):
-        for item_data in self._request('users'):
-            yield TCItem('User ' + item_data['user_id'], item_data)
+        if self._users is None:
+            self._users = {user['user_id']: TCItem('User ' + user['user_id'], user)  # noqa
+                           for user in self._request('users')}
+        return self._users
 
     def user_by_id(self, user_id):
-        for user in self._request('users'):
-            if user['user_id'] == user_id:
-                return TCItem("User {}".format(user['user_id']), user)
+        if user_id in self.users.keys():
+            return self.users[user_id]
         else:
             m = "No user found with id {}."
             raise TimecampError(m.format(user_id))
 
     def user_by_name(self, name):
-        for user in self._request('users'):
-            if user['display_name'] == name:
-                return TCItem("User {}".format(user['user_id']), user)
+        for user in self.users.values():
+            if user.display_name == name:
+                return user
         else:
             err = "No user named {} found.".format(name)
             raise TimecampError(err)
