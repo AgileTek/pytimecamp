@@ -1,5 +1,5 @@
-__author__ = 'stevenrossiter'
-__version__ = '0.1.1'
+__author__ = 'agiletekengineering'
+__version__ = '0.1.13'
 import datetime as dt
 
 import dateutil.relativedelta as rdelta
@@ -33,6 +33,10 @@ def convert_day_name(day_name):
 
 
 def string_from_date_type(date):
+    """
+    :param date: a str, datetime.date or datetime.datetime date
+    :return: string formatted as per DATE_FORMAT
+    """
     if isinstance(date, (dt.date, dt.datetime)):
         return date.strftime(DATE_FORMAT)
     elif isinstance(date, str):
@@ -46,6 +50,19 @@ def string_from_date_type(date):
 class TimecampError(Exception):
     """branded errors."""
     pass
+
+class TCItem:
+    def __init__(self, item_type, item_data):
+        self.item_type = item_type
+        self._data = item_data
+        for attr, value in item_data.items():
+            setattr(self, attr, value)
+
+    def __repr__(self):
+        s = "\n<" + self.item_type + ">"
+        for k, v in self._data.items():
+            s += "\n{}: {}".format(k, v)
+        return s
 
 
 class Timecamp:
@@ -62,23 +79,26 @@ class Timecamp:
         self.start_week = convert_day_name(kwargs.get('week_starts',
                                                       'monday'))
         self.check_ssl = kwargs.get('check_ssl', True)
+        self._users = None
 
     def _request(self, item_type, method='get', data=None, **kwargs):
         if item_type not in TC_ITEM_TYPES:
             raise TimecampError("{} is not a valid API item.".format(item_type))
-        if data:
-            HEADERS['Content-Type'] = 'application/x-www-form-urlencoded'
+        if data is None:
+            data = {}
+        HEADERS['Content-Type'] = 'application/x-www-form-urlencoded'
         base_url = "{}/{}/format/json/api_token/{}".format(URL_START, item_type,
                                                            self.api_token)
         from_date = kwargs.get('from_date')
         to_date = kwargs.get('to_date')
         base_url += self._parse_dates(from_date, to_date)
-        ids = [(k, v) for k, v in kwargs.items() if \
-               k.endswith("_ids")]
+        ids = [(k, v) for k, v in kwargs.items() if k.endswith("_ids")]
         for id_type, values in ids:
             if values:
-                csv_values = ','.join([str(v) for v in values])
-                base_url += "/{}/{}".format(id_type, csv_values)
+                csv = ','.join([str(v) for v in values])
+                base_url += "/{}/{}".format(id_type, csv)
+        if not kwargs.get("exclude_archived"):
+            data['exclude_archived'] = 1
         if kwargs.get('with_subtasks'):
             base_url += "/with_subtasks/1"
         if kwargs.get('task_id'):
@@ -109,25 +129,26 @@ class Timecamp:
 
     def _one_item(self, item_type, item_data, method="post"):
         item = self._request(item_type, method, data=item_data)
-        return list(item.items())[0]
+        return item
 
     @property
     def users(self):
-        for item_data in self._request('users'):
-            yield TCItem('User ' + item_data['user_id'], item_data)
+        if self._users is None:
+            self._users = {user['user_id']: TCItem('User ' + user['user_id'], user)  # noqa
+                           for user in self._request('users')}
+        return self._users
 
     def user_by_id(self, user_id):
-        for user in self._request('users'):
-            if user['user_id'] == user_id:
-                return TCItem("User {}".format(user['user_id']), user)
+        if user_id in self.users.keys():
+            return self.users[user_id]
         else:
             m = "No user found with id {}."
             raise TimecampError(m.format(user_id))
 
     def user_by_name(self, name):
-        for user in self._request('users'):
-            if user['display_name'] == name:
-                return TCItem("User {}".format(user['user_id']), user)
+        for user in self.users.values():
+            if user.display_name == name:
+                return user
         else:
             err = "No user named {} found.".format(name)
             raise TimecampError(err)
@@ -175,12 +196,12 @@ class Timecamp:
             yield TCItem("Entry {}".format(entry['id']), entry)
 
     def add_entry(self, entry_data):
-        entry_id, entry_data = self._one_item('entries', entry_data)
-        return TCItem('Entry {}'.format(entry_id), entry_data)
+        entry_data = self._one_item('entries', entry_data)
+        return TCItem('Entry {}'.format(entry_data['entry_id']), entry_data)
 
     def update_entry(self, entry_data):
-        entry_id, entry_data = self._one_item('tasks', entry_data, 'put')
-        return TCItem('Entry {}'.format(entry_id), entry_data)
+        entry_data = self._one_item('entries', entry_data, 'put')
+        return TCItem('Entry {}'.format(entry_data['entry_id']), entry_data)
 
     def activities_by_day(self, date=TODAY, user_id=None):
         for activity in self._request("activity", date=date,
@@ -212,15 +233,3 @@ class Timecamp:
             yield TCItem("Window " + window_id, window_data)
 
 
-class TCItem:
-    def __init__(self, item_type, item_data):
-        self.item_type = item_type
-        self._data = item_data
-        for attr, value in item_data.items():
-            setattr(self, attr, value)
-
-    def __repr__(self):
-        s = "\n<" + self.item_type + ">"
-        for k, v in self._data.items():
-            s += "\n{}: {}".format(k, v)
-        return s

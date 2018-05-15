@@ -1,3 +1,7 @@
+0.1.13 (14-May 18)
+
+- Make embedding users more efficient
+
 0.1.10 (8-Jan-18)
 
 - fix for update item
