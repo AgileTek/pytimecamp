@@ -167,8 +167,6 @@ class Timecamp:
         task_data = self._request('tasks', task_id=task_id)
         if not task_data:
             raise TimecampError("No task with id " + str(task_id))
-        else:
-            task_data = list(task_data.values())[0]
         if task_data['users'] and embed_users:
             task_data['users'] = self._embedded_users(task_data['users'].keys())
         return TCItem('Task {}'.format(task_id), task_data)
