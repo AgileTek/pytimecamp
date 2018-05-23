@@ -204,6 +204,23 @@ class Timecamp:
                 entry['user_id'] = self.user_by_id(entry['user_id'])
             yield TCItem("Entry {}".format(entry['id']), entry)
 
+    def entries_changes(self, from_date, to_date=None, task_ids=None,
+                        user_ids=None, embed_user=False):
+
+        if (task_ids is not None) and (
+                not isinstance(task_ids, (tuple, list))):
+            raise TimecampError("task_ids needs to be None, list or tuple.")
+        if (user_ids is not None) and (
+                not isinstance(user_ids, (tuple, list))):
+            raise TimecampError("user_ids needs to be None, list or tuple.")
+        entries = self._request("entries_changes", from_date=from_date,
+                                to_date=to_date,
+                                task_ids=task_ids, user_ids=user_ids)
+        for entry in entries:
+            if embed_user:
+                entry['user_id'] = self.user_by_id(entry['user_id'])
+            yield TCItem("Entry {}".format(entry['entry_id']), entry)
+
     def add_entry(self, entry_data):
         entry_data = self._one_item('entries', entry_data)
         return TCItem('Entry {}'.format(entry_data['entry_id']), entry_data)
@@ -241,5 +258,4 @@ class Timecamp:
                                 window_title_ids=window_title_ids)
         for window_id, window_data in windows.items():
             yield TCItem("Window " + window_id, window_data)
-
 
