@@ -1,5 +1,5 @@
 __author__ = 'agiletekengineering'
-__version__ = '0.1.13'
+__version__ = '0.1.16'
 import datetime as dt
 
 import dateutil.relativedelta as rdelta
@@ -11,7 +11,7 @@ URL_START = "https://www.timecamp.com/third_party/api"
 TC_ITEM_TYPES = ['users', 'tasks', 'entries', 'timer_running',
                  'entries_changes', 'activity', 'application',
                  'window_title', 'client', 'invoice', 'attendance',
-                 'away_time']
+                 'away_time', 'rate']
 TODAY = dt.date.today()
 DATE_FORMAT = "%Y-%m-%d"
 HEADERS = {'user-agent': 'pytimecamp/{}'.format(__version__)}
@@ -51,6 +51,7 @@ class TimecampError(Exception):
     """branded errors."""
     pass
 
+
 class TCItem:
     def __init__(self, item_type, item_data):
         self.item_type = item_type
@@ -63,6 +64,27 @@ class TCItem:
         for k, v in self._data.items():
             s += "\n{}: {}".format(k, v)
         return s
+
+
+class RateTCItem(object):
+    def __init__(self, rate_id, user_id, task_id, rate):
+        """
+        A little awkward as we currently only handle a single rate and the
+        data that comes back from Timecamp isn't in a great format
+        """
+        self.rate_id = rate_id
+        self.user_id = user_id
+        self.rate = rate
+        self.task_id = task_id
+
+    def __repr__(self):
+        s = "\n<Rate {0}>".format(self.rate_id)
+        for k, v in self.asdict().items():
+            s += "\n{}: {}".format(k, v)
+        return s
+
+    def asdict(self):
+        return self.__dict__
 
 
 class Timecamp:
@@ -87,7 +109,8 @@ class Timecamp:
         if data is None:
             data = {}
         HEADERS['Content-Type'] = 'application/x-www-form-urlencoded'
-        base_url = "{}/{}/format/json/api_token/{}".format(URL_START, item_type,
+        base_url = "{}/{}/format/json/api_token/{}".format(URL_START,
+                                                           item_type,
                                                            self.api_token)
         from_date = kwargs.get('from_date')
         to_date = kwargs.get('to_date')
@@ -209,6 +232,21 @@ class Timecamp:
             if embed_user:
                 entry['user_id'] = self.user_by_id(entry['user_id'])
             yield TCItem("Entry {}".format(entry['entry_id']), entry)
+
+    def rates(self, task_ids, user_ids, rate_ids):
+        assert len(rate_ids) == 1,  'Currently only a single rate_id is supported'  # noqa
+        assert len(task_ids) == 1, 'Currently only a single task_id is supported'  # noqa
+        rate_id = rate_ids[0]
+        rates = self._request("rate",
+                              task_ids=task_ids,
+                              user_ids=user_ids,
+                              rate_ids=[rate_id])
+        values = rates[str(rate_id)]['values']
+        for user_id, rate in values.items():
+            yield RateTCItem(user_id=user_id,
+                             task_id=task_ids[0],
+                             rate_id=rate_id,
+                             rate=rate,)
 
     def add_entry(self, entry_data):
         entry_data = self._one_item('entries', entry_data)
