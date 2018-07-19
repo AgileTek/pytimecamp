@@ -11,7 +11,10 @@ setup(
     description=("A wrapper around the Timecamp API."),
     license="MIT",
     url="https://pythonhosted.org/pytimecamp/",
-    packages=['pytimecamp'],
+    packages=[
+        'python-dateutil',
+        'pytimecamp'
+    ],
     install_requires=["requests", "python-dateutil"],
     classifiers=[
         "Development Status :: 4 - Beta",
