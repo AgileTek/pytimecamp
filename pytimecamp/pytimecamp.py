@@ -1,7 +1,6 @@
-__author__ = 'agiletekengineering'
-__version__ = '0.1.16'
-import datetime as dt
 
+import datetime as dt
+from pytimecamp import __version__
 import dateutil.relativedelta as rdelta
 from dateutil.rrule import DAILY, rrule
 from dateutil.parser import parse
