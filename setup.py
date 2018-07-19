@@ -12,7 +12,6 @@ setup(
     license="MIT",
     url="https://pythonhosted.org/pytimecamp/",
     packages=[
-        'python-dateutil',
         'pytimecamp'
     ],
     install_requires=["requests", "python-dateutil"],
